@@ -13,11 +13,15 @@ const stores = Array.from({ length: 15 }, (_, index) => {
 export default function HomeScreen({ navigation, onLogout, targetScreen = 'StoreDashboard' }) {
   const { width } = useWindowDimensions();
   const columnCount = width >= 720 ? 3 : 2;
+  const listWidth = Math.min(width, 1180);
+  const horizontalPadding = 24;
+  const columnGap = 12;
+  const cardWidth = (listWidth - horizontalPadding - columnGap * (columnCount - 1)) / columnCount;
 
   const renderItem = ({ item }) => (
     <Pressable
       accessibilityRole="button"
-      style={({ pressed }) => [styles.card, pressed && styles.cardPressed]}
+      style={({ pressed }) => [styles.card, { width: cardWidth }, pressed && styles.cardPressed]}
       onPress={() => navigation.navigate(targetScreen, { storeId: item.id, storeName: item.name })}
     >
       <View style={styles.cardAccent} />
@@ -103,7 +107,6 @@ const styles = StyleSheet.create({
     gap: 12,
   },
   card: {
-    flex: 1,
     minHeight: 116,
     backgroundColor: '#ffffff',
     marginBottom: 12,
