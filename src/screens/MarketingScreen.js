@@ -1,20 +1,13 @@
 import React from 'react';
 import { View, Text, StyleSheet, FlatList, Image } from 'react-native';
 
-const getCampaignImageSource = item => {
-  if (item.image) {
-    return { uri: item.image };
-  }
-
-  return null;
-};
-
 export default function MarketingScreen({ route, customCampaigns = [], dataError = '' }) {
   const { storeId, storeName } = route.params ?? {};
   const userCampaigns = customCampaigns
     .filter(activity => activity.storeId === storeId)
     .map(activity => ({
       ...activity,
+      images: activity.images?.length ? activity.images : activity.image ? [activity.image] : [],
       period: activity.period ?? 'Въведена активност',
     }));
 
@@ -29,12 +22,17 @@ export default function MarketingScreen({ route, customCampaigns = [], dataError
         ListEmptyComponent={<Text style={styles.emptyText}>Няма въведени маркетингови активности.</Text>}
         renderItem={({ item }) => (
           <View style={styles.card}>
-            {getCampaignImageSource(item) ? (
-              <Image
-                source={getCampaignImageSource(item)}
-                style={styles.image}
-                resizeMode="contain"
-              />
+            {item.images.length ? (
+              <View style={styles.imageGrid}>
+                {item.images.map((image, index) => (
+                  <Image
+                    key={`${image}-${index}`}
+                    source={{ uri: image }}
+                    style={styles.image}
+                    resizeMode="cover"
+                  />
+                ))}
+              </View>
             ) : null}
             <View style={styles.cardBody}>
               <Text style={styles.campaignTitle}>{item.title}</Text>
@@ -83,10 +81,20 @@ const styles = StyleSheet.create({
     borderColor: '#e2e8f0',
     overflow: 'hidden',
   },
-  image: {
-    width: '100%',
-    height: 150,
+  imageGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 8,
+    padding: 10,
     backgroundColor: '#f8fafc',
+  },
+  image: {
+    flexGrow: 1,
+    width: 150,
+    minWidth: 130,
+    height: 140,
+    borderRadius: 9,
+    backgroundColor: '#e2e8f0',
   },
   cardBody: {
     padding: 16,

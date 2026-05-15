@@ -41,15 +41,27 @@ const normalizeOrder = order => ({
   })),
 });
 
-const normalizeMarketingActivity = activity => ({
-  id: activity.id?.toString(),
-  storeId: activity.store_id?.toString() ?? '1',
-  title: activity.title,
-  description: activity.description,
-  image: activity.image_url ?? '',
-  imageName: '',
-  period: 'Въведена активност',
-});
+const normalizeMarketingImages = activity => {
+  const imageUrls = Array.isArray(activity.image_urls) ? activity.image_urls : [];
+  const legacyImage = activity.image_url ? [activity.image_url] : [];
+
+  return [...imageUrls, ...legacyImage].filter(Boolean);
+};
+
+const normalizeMarketingActivity = activity => {
+  const images = normalizeMarketingImages(activity);
+
+  return {
+    id: activity.id?.toString(),
+    storeId: activity.store_id?.toString() ?? '1',
+    title: activity.title,
+    description: activity.description,
+    image: images[0] ?? '',
+    images,
+    imageName: '',
+    period: 'Въведена активност',
+  };
+};
 
 const dataUrlToBlob = async dataUrl => {
   const response = await fetch(dataUrl);
@@ -79,6 +91,20 @@ const uploadMarketingImage = async ({ image, imageName }) => {
 
   const { data } = supabase.storage.from(MARKETING_BUCKET).getPublicUrl(filePath);
   return data.publicUrl;
+};
+
+const uploadMarketingImages = async images => {
+  const uploadedImages = await Promise.all(
+    images
+      .map(image => ({
+        image: image.uri ?? image,
+        imageName: image.name ?? '',
+      }))
+      .filter(image => image.image)
+      .map(uploadMarketingImage)
+  );
+
+  return uploadedImages.filter(Boolean);
 };
 
 export const loadProducts = async () => {
@@ -169,8 +195,8 @@ export const loadMarketingActivities = async () => {
   return (data ?? []).map(normalizeMarketingActivity);
 };
 
-export const createMarketingActivity = async ({ storeId, title, description, image, imageName }) => {
-  const imageUrl = await uploadMarketingImage({ image, imageName });
+export const createMarketingActivity = async ({ storeId, title, description, images = [] }) => {
+  const imageUrls = await uploadMarketingImages(images);
 
   const { data, error } = await supabase
     .from('marketing_activities')
@@ -178,7 +204,8 @@ export const createMarketingActivity = async ({ storeId, title, description, ima
       store_id: storeId,
       title,
       description,
-      image_url: imageUrl,
+      image_url: imageUrls[0] ?? '',
+      image_urls: imageUrls,
     })
     .select('*')
     .single();
@@ -187,15 +214,16 @@ export const createMarketingActivity = async ({ storeId, title, description, ima
   return normalizeMarketingActivity(data);
 };
 
-export const updateMarketingActivity = async ({ id, title, description, image, imageName }) => {
-  const imageUrl = await uploadMarketingImage({ image, imageName });
+export const updateMarketingActivity = async ({ id, title, description, images = [] }) => {
+  const imageUrls = await uploadMarketingImages(images);
 
   const { data, error } = await supabase
     .from('marketing_activities')
     .update({
       title,
       description,
-      image_url: imageUrl,
+      image_url: imageUrls[0] ?? '',
+      image_urls: imageUrls,
     })
     .eq('id', id)
     .select('*')

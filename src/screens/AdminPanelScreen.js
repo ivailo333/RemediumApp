@@ -30,7 +30,7 @@ const createOrderRow = () => ({
 const initialForms = {
   product: { name: '', quantity: '' },
   order: { date: '' },
-  marketing: { title: '', image: '', imageName: '', description: '' },
+  marketing: { title: '', imageUrl: '', images: [], description: '' },
 };
 
 const sections = [
@@ -216,41 +216,56 @@ export default function AdminPanelScreen({
     const input = globalThis.document.createElement('input');
     input.type = 'file';
     input.accept = 'image/*';
+    input.multiple = true;
     input.onchange = event => {
-      const file = event.target.files?.[0];
-      if (!file) return;
+      const files = Array.from(event.target.files ?? []);
+      if (files.length === 0) return;
 
-      const reader = new globalThis.FileReader();
-      reader.onload = readerEvent => {
+      Promise.all(
+        files.map(
+          file =>
+            new Promise(resolve => {
+              const reader = new globalThis.FileReader();
+              reader.onload = readerEvent => {
+                resolve({
+                  uri: readerEvent.target?.result ?? '',
+                  name: file.name,
+                });
+              };
+              reader.readAsDataURL(file);
+            })
+        )
+      ).then(selectedImages => {
         setForms(currentForms => ({
           ...currentForms,
           marketing: {
             ...currentForms.marketing,
-            image: readerEvent.target?.result ?? '',
-            imageName: file.name,
+            images: [...currentForms.marketing.images, ...selectedImages.filter(image => image.uri)],
           },
         }));
-      };
-      reader.readAsDataURL(file);
+      });
     };
     input.click();
   };
 
-  const removeMarketingImage = () => {
+  const removeMarketingImage = index => {
     setForms(currentForms => ({
       ...currentForms,
       marketing: {
         ...currentForms.marketing,
-        image: '',
-        imageName: '',
+        images: Number.isInteger(index)
+          ? currentForms.marketing.images.filter((_, imageIndex) => imageIndex !== index)
+          : [],
       },
     }));
   };
 
   const saveMarketingActivity = async () => {
     const title = forms.marketing.title.trim();
-    const image = forms.marketing.image.trim();
-    const imageName = forms.marketing.imageName.trim();
+    const imageUrl = forms.marketing.imageUrl.trim();
+    const images = imageUrl
+      ? [...forms.marketing.images, { uri: imageUrl, name: '' }]
+      : forms.marketing.images;
     const description = forms.marketing.description.trim();
     if (!title || !description) return;
 
@@ -263,8 +278,7 @@ export default function AdminPanelScreen({
           id: editingMarketingId,
           title,
           description,
-          image,
-          imageName,
+          images,
         });
 
         onMarketingActivitiesChange(
@@ -277,8 +291,7 @@ export default function AdminPanelScreen({
           storeId,
           title,
           description,
-          image,
-          imageName,
+          images,
         });
 
         onMarketingActivitiesChange([createdActivity, ...marketingActivities]);
@@ -298,8 +311,8 @@ export default function AdminPanelScreen({
       ...currentForms,
       marketing: {
         title: activity.title,
-        image: activity.image ?? '',
-        imageName: activity.imageName ?? '',
+        imageUrl: '',
+        images: (activity.images ?? []).map(image => ({ uri: image, name: '' })),
         description: activity.description,
       },
     }));
@@ -454,13 +467,12 @@ export default function AdminPanelScreen({
           />
           <Field
             label="Снимка или URL"
-            value={forms.marketing.image}
-            onChangeText={value => updateForm('marketing', 'image', value)}
+            value={forms.marketing.imageUrl}
+            onChangeText={value => updateForm('marketing', 'imageUrl', value)}
             placeholder="Изберете файл или поставете URL към снимка"
           />
           <MarketingImagePicker
-            image={forms.marketing.image}
-            imageName={forms.marketing.imageName}
+            images={forms.marketing.images}
             onPick={chooseMarketingImage}
             onRemove={removeMarketingImage}
           />
@@ -597,20 +609,33 @@ function Field({ label, multiline = false, ...props }) {
   );
 }
 
-function MarketingImagePicker({ image, imageName, onPick, onRemove }) {
+function MarketingImagePicker({ images = [], onPick, onRemove }) {
   const canPickFile = Boolean(globalThis.document && globalThis.FileReader);
+  const image = images[0];
 
   return (
     <View style={styles.imagePickerBox}>
-      {image ? (
-        <Image source={{ uri: image }} style={styles.marketingImagePreview} resizeMode="cover" />
+      {images.length > 0 ? (
+        <View style={styles.marketingImagesGrid}>
+          {images.map((image, index) => (
+            <View key={`${image.uri ?? image}-${index}`} style={styles.marketingImageItem}>
+              <Image source={{ uri: image.uri ?? image }} style={styles.marketingImagePreview} resizeMode="cover" />
+              <Pressable
+                accessibilityRole="button"
+                style={({ pressed }) => [styles.removeImageButton, pressed && styles.removeButtonPressed]}
+                onPress={() => onRemove(index)}
+              >
+                <Text style={styles.removeButtonText}>РњР°С…РЅРё</Text>
+              </Pressable>
+              {image.name ? <Text style={styles.imageName}>{image.name}</Text> : null}
+            </View>
+          ))}
+        </View>
       ) : (
         <View style={styles.emptyImagePreview}>
           <Text style={styles.emptyImageText}>Няма избрана снимка</Text>
         </View>
       )}
-
-      {imageName ? <Text style={styles.imageName}>{imageName}</Text> : null}
 
       <View style={styles.imageActions}>
         <Pressable
@@ -684,13 +709,24 @@ function MarketingPreviewList({ items, editingMarketingId, onEdit, onDelete }) {
       ) : (
         items.map(item => (
           <View key={item.id} style={styles.marketingPreviewItem}>
-            {item.image ? (
-              <Image source={{ uri: item.image }} style={styles.marketingPreviewImage} resizeMode="cover" />
+            {item.images?.length ? (
+              <View style={styles.marketingPreviewGrid}>
+                {item.images.map((image, index) => (
+                  <Image
+                    key={`${image}-${index}`}
+                    source={{ uri: image }}
+                    style={styles.marketingPreviewImage}
+                    resizeMode="cover"
+                  />
+                ))}
+              </View>
             ) : null}
             <View style={styles.productPreviewTextBlock}>
               <Text style={styles.productPreviewTitle}>{item.title}</Text>
               <Text style={styles.previewItem}>{item.description}</Text>
-              {item.imageName ? <Text style={styles.productPreviewMeta}>{item.imageName}</Text> : null}
+              {item.images?.length ? (
+                <Text style={styles.productPreviewMeta}>{item.images.length} снимки</Text>
+              ) : null}
             </View>
             <View style={styles.productActions}>
               <ActionButton
@@ -1014,6 +1050,23 @@ const styles = StyleSheet.create({
     borderRadius: 10,
     backgroundColor: '#e2e8f0',
   },
+  marketingImagesGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 10,
+  },
+  marketingImageItem: {
+    width: '48%',
+    minWidth: 140,
+    gap: 6,
+  },
+  removeImageButton: {
+    backgroundColor: '#fee2e2',
+    borderRadius: 9,
+    paddingHorizontal: 10,
+    paddingVertical: 8,
+    alignItems: 'center',
+  },
   emptyImagePreview: {
     height: 130,
     borderRadius: 10,
@@ -1136,10 +1189,15 @@ const styles = StyleSheet.create({
     gap: 10,
   },
   marketingPreviewImage: {
-    width: '100%',
-    height: 150,
+    width: 118,
+    height: 92,
     borderRadius: 9,
     backgroundColor: '#e2e8f0',
+  },
+  marketingPreviewGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 8,
   },
   productPreviewTextBlock: {
     gap: 3,

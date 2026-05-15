@@ -61,6 +61,7 @@ npm.cmd run start:offline
 - `supabase-rls-policies.sql`
 - `supabase-store-scope-migration.sql`
 - `supabase-product-stock-date-migration.sql`
+- `supabase-marketing-images-migration.sql`
 
 ## Структура
 
