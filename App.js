@@ -19,6 +19,21 @@ import {
 
 const Stack = createNativeStackNavigator();
 
+const linking = {
+  prefixes: ['https://remadiumapp.netlify.app', 'http://localhost:8081'],
+  config: {
+    screens: {
+      Home: '',
+      AdminPanel: 'admin/:storeId',
+      StoreDashboard: 'store/:storeId',
+      Inventory: 'store/:storeId/inventory',
+      Orders: 'store/:storeId/orders',
+      Marketing: 'store/:storeId/marketing',
+      OrderDetail: 'store/:storeId/orders/detail',
+    },
+  },
+};
+
 export default function App() {
   const [currentUser, setCurrentUser] = useState(null);
   const [products, setProducts] = useState([]);
@@ -86,7 +101,7 @@ export default function App() {
   const isAdmin = currentUser.role === 'administrator';
 
   return (
-    <NavigationContainer>
+    <NavigationContainer linking={linking}>
       <Stack.Navigator
         initialRouteName="Home"
         screenOptions={{
