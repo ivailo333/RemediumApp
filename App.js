@@ -18,6 +18,28 @@ import {
 } from './src/services/remediumData';
 
 const Stack = createNativeStackNavigator();
+const SESSION_STORAGE_KEY = 'remedium-current-user';
+
+const loadSavedUser = () => {
+  if (!globalThis.localStorage) return null;
+
+  try {
+    const savedUser = globalThis.localStorage.getItem(SESSION_STORAGE_KEY);
+    return savedUser ? JSON.parse(savedUser) : null;
+  } catch {
+    return null;
+  }
+};
+
+const saveUserSession = user => {
+  if (!globalThis.localStorage) return;
+  globalThis.localStorage.setItem(SESSION_STORAGE_KEY, JSON.stringify(user));
+};
+
+const clearUserSession = () => {
+  if (!globalThis.localStorage) return;
+  globalThis.localStorage.removeItem(SESSION_STORAGE_KEY);
+};
 
 const linking = {
   prefixes: ['https://remadiumapp.netlify.app', 'http://localhost:8081'],
@@ -35,7 +57,7 @@ const linking = {
 };
 
 export default function App() {
-  const [currentUser, setCurrentUser] = useState(null);
+  const [currentUser, setCurrentUser] = useState(loadSavedUser);
   const [products, setProducts] = useState([]);
   const [orders, setOrders] = useState([]);
   const [marketingActivities, setMarketingActivities] = useState([]);
@@ -82,12 +104,18 @@ export default function App() {
   }, [currentUser]);
 
   const logout = () => {
+    clearUserSession();
     setCurrentUser(null);
     setDataError('');
   };
 
+  const login = user => {
+    saveUserSession(user);
+    setCurrentUser(user);
+  };
+
   if (!currentUser) {
-    return <LoginScreen onLogin={setCurrentUser} />;
+    return <LoginScreen onLogin={login} />;
   }
 
   if (isLoadingData) {
