@@ -1,50 +1,86 @@
-# Welcome to your Expo app 👋
+# Remedium App
 
-This is an [Expo](https://expo.dev) project created with [`create-expo-app`](https://www.npmjs.com/package/create-expo-app).
+Expo / React Native приложение за проследяване на наличности, поръчки и маркетингови активности по обекти „Ремедиум“.
 
-## Get started
+## Основна функционалност
 
-1. Install dependencies
+- Начален екран с 15 обекта: „Ремедиум 1“ до „Ремедиум 15“.
+- Вход в системата с два типа потребители:
+  - администратор: `admin` / `nimda`
+  - обикновен потребител: `user` / `user123`
+- Обикновеният потребител избира обект и вижда:
+  - „Наличности“
+  - „Поръчки“
+  - „Маркетингови активности“
+- Администраторът избира обект и управлява данните само за избрания обект:
+  - добавяне, редактиране и изтриване на наличности
+  - създаване на поръчки с дата и няколко продукта
+  - добавяне, редактиране, изтриване и подмяна на снимки към маркетингови активности
+- Данните се зареждат и записват в Supabase/PostgreSQL.
 
-   ```bash
-   npm install
-   ```
+Страницата „Срочни продукти“ е премахната по текущо изискване.
 
-2. Start the app
+## Стартиране
 
-   ```bash
-   npx expo start
-   ```
-
-In the output, you'll find options to open the app in a
-
-- [development build](https://docs.expo.dev/develop/development-builds/introduction/)
-- [Android emulator](https://docs.expo.dev/workflow/android-studio-emulator/)
-- [iOS simulator](https://docs.expo.dev/workflow/ios-simulator/)
-- [Expo Go](https://expo.dev/go), a limited sandbox for trying out app development with Expo
-
-You can start developing by editing the files inside the **app** directory. This project uses [file-based routing](https://docs.expo.dev/router/introduction).
-
-## Get a fresh project
-
-When you're ready, run:
+Инсталиране на зависимостите:
 
 ```bash
-npm run reset-project
+npm install
 ```
 
-This command will move the starter code to the **app-example** directory and create a blank **app** directory where you can start developing.
+Стартиране на проекта:
 
-## Learn more
+```bash
+npm run start
+```
 
-To learn more about developing your project with Expo, look at the following resources:
+За Windows PowerShell, ако `npm` е блокиран от Execution Policy:
 
-- [Expo documentation](https://docs.expo.dev/): Learn fundamentals, or go into advanced topics with our [guides](https://docs.expo.dev/guides).
-- [Learn Expo tutorial](https://docs.expo.dev/tutorial/introduction/): Follow a step-by-step tutorial where you'll create a project that runs on Android, iOS, and the web.
+```bash
+npm.cmd run start
+```
 
-## Join the community
+Ако Expo CLI няма достъп до Expo API и върне `fetch failed`, стартирайте локално без мрежови проверки:
 
-Join our community of developers creating universal apps.
+```bash
+npm.cmd run start:offline
+```
 
-- [Expo on GitHub](https://github.com/expo/expo): View our open source platform and contribute.
-- [Discord community](https://chat.expo.dev): Chat with Expo users and ask questions.
+## Supabase
+
+Приложението използва Supabase за:
+
+- таблица `products` - наличности по обект
+- таблица `orders` - поръчки по обект
+- таблица `order_items` - продукти към всяка поръчка
+- таблица `marketing_activities` - маркетингови активности по обект
+- storage bucket `marketing-images` - снимки към маркетинговите активности
+
+Необходимите SQL файлове в проекта са:
+
+- `supabase-rls-policies.sql`
+- `supabase-store-scope-migration.sql`
+- `supabase-product-stock-date-migration.sql`
+
+## Структура
+
+- `App.js` - основна навигация, вход/изход и зареждане на данни.
+- `src/lib/supabase.js` - Supabase клиент.
+- `src/services/remediumData.js` - операции за четене, създаване, редакция и изтриване на данни.
+- `src/screens/LoginScreen.js` - вход в системата.
+- `src/screens/HomeScreen.js` - избор на обект.
+- `src/screens/StoreDashboardScreen.js` - потребителски секции за избран обект.
+- `src/screens/InventoryScreen.js` - наличности.
+- `src/screens/OrdersScreen.js` - списък с поръчки.
+- `src/screens/OrderDetailScreen.js` - детайли на поръчка.
+- `src/screens/MarketingScreen.js` - маркетингови активности.
+- `src/screens/AdminPanelScreen.js` - администраторски панел.
+
+## Проверки
+
+```bash
+npm.cmd run lint
+npx.cmd expo export --platform web --output-dir dist
+```
+
+След web export може да изтриете папката `dist`, ако е била създадена само за проверка.
